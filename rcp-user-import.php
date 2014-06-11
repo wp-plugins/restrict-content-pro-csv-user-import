@@ -3,7 +3,7 @@
 Plugin Name: Restrict Content Pro - CSV User Import
 Plugin URL: http://pippinsplugins.com/rcp-csv-user-import
 Description: Allows you to import a CSV of users into Restrict Content Pro
-Version: 1.0
+Version: 1.0.1
 Author: Pippin Williamson
 Author URI: http://pippinsplugins.com
 Contributors: mordauk, chriscoyier
@@ -106,8 +106,15 @@ function rcp_csvui_process_csv() {
 		$csv_array = rcp_csvui_csv_to_array( $csv, $delimiter );
 
 		$subscription_id = isset( $_POST['rcp_level'] ) ? absint( $_POST['rcp_level'] ) : false;
-		if( !$subscription_id )
+		if( ! $subscription_id ) {
 			wp_die( __('Please select a subscription level.', 'rcp_csvui' ), __('Error') );
+		}
+
+		$subscription_details = rcp_get_subscription_details( $subscription_id );
+
+		if( ! $subscription_details ) {
+			wp_die( sprintf( __('That subscription level does not exist: #%d.', 'rcp_csvui' ), $subscription_id ), __('Error') );
+		}
 
 		$status = isset( $_POST['rcp_status'] ) ? esc_attr( $_POST['rcp_status'] ) : 'free';
 
@@ -132,8 +139,9 @@ function rcp_csvui_process_csv() {
 						'user_login' => $user_login, 
 						'user_email' => $email, 
 						'first_name' => $user['first_name'], 
-						'last_name' => $user['last_name'],
-						'user_pass' => $password
+						'last_name'  => $user['last_name'],
+						'user_pass'  => $password,
+						'role'       => ! empty( $subscription_details->role ) ? $subscription_details->role : 'subscriber'
 					) 
 				);
 
