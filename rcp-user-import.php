@@ -3,7 +3,7 @@
 Plugin Name: Restrict Content Pro - CSV User Import
 Plugin URL: http://pippinsplugins.com/rcp-csv-user-import
 Description: Allows you to import a CSV of users into Restrict Content Pro
-Version: 1.0.1
+Version: 1.0.2
 Author: Pippin Williamson
 Author URI: http://pippinsplugins.com
 Contributors: mordauk, chriscoyier
@@ -96,7 +96,7 @@ function rcp_csvui_process_csv() {
 
 		if( ! wp_verify_nonce( $_POST['rcp_csvui_nonce'], 'rcp_csvui_nonce' ) )
 			return;
-		
+
 		$csv = isset( $_FILES['rcp_csvui_file'] ) ? $_FILES['rcp_csvui_file']['tmp_name'] : false;
 		if( !$csv )
 			wp_die( __('Please upload a CSV file.', 'rcp_csvui' ), __('Error') );
@@ -134,16 +134,16 @@ function rcp_csvui_process_csv() {
 
 				$user_login = isset( $user['user_login'] ) && strlen( trim( $user['user_login'] ) ) > 0 ? $user['user_login'] : $user['user_email'];
 
-				$user_id = wp_insert_user( 
-					array( 
-						'user_login' => $user_login, 
-						'user_email' => $email, 
-						'first_name' => $user['first_name'], 
-						'last_name'  => $user['last_name'],
-						'user_pass'  => $password,
-						'role'       => ! empty( $subscription_details->role ) ? $subscription_details->role : 'subscriber'
-					) 
+				$user_data = array(
+					'user_login' => $user_login,
+					'user_email' => $email,
+					'first_name' => $user['first_name'],
+					'last_name'  => $user['last_name'],
+					'user_pass'  => $password,
+					'role'       => ! empty( $subscription_details->role ) ? $subscription_details->role : 'subscriber'
 				);
+
+				$user_id = wp_insert_user( $user_data );
 
 			} else {
 				$user_id = $user->ID;
@@ -153,6 +153,8 @@ function rcp_csvui_process_csv() {
             add_user_meta( $user_id, 'rcp_subscription_level', $subscription_id );
             add_user_meta( $user_id, 'rcp_status', $status );
             add_user_meta( $user_id, 'rcp_expiration', $expiration );
+
+            do_action( 'rcp_user_import_user_added', $user_id, $user_data, $subscription_id, $status, $expiration );
 		}
 		wp_redirect( admin_url( '/admin.php?page=rcp-csv-import&rcp-message=users-imported' ) ); exit;
 	}
