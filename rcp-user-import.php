@@ -3,7 +3,7 @@
 Plugin Name: Restrict Content Pro - CSV User Import
 Plugin URL: http://pippinsplugins.com/rcp-csv-user-import
 Description: Allows you to import a CSV of users into Restrict Content Pro
-Version: 1.0.2
+Version: 1.0.3
 Author: Pippin Williamson
 Author URI: http://pippinsplugins.com
 Contributors: mordauk, chriscoyier
@@ -92,20 +92,23 @@ function rcp_csvui_purchase_import() {
 }
 
 function rcp_csvui_process_csv() {
+
 	if( isset( $_POST['rcp_action'] ) && $_POST['rcp_action'] == 'process_csv_import' ) {
 
-		if( ! wp_verify_nonce( $_POST['rcp_csvui_nonce'], 'rcp_csvui_nonce' ) )
+		if( ! wp_verify_nonce( $_POST['rcp_csvui_nonce'], 'rcp_csvui_nonce' ) ) {
 			return;
+		}
 
 		$csv = isset( $_FILES['rcp_csvui_file'] ) ? $_FILES['rcp_csvui_file']['tmp_name'] : false;
-		if( !$csv )
+
+		if( !$csv ) {
 			wp_die( __('Please upload a CSV file.', 'rcp_csvui' ), __('Error') );
+		}
 
-		$delimiter = isset( $_POST['delimiter'] ) ? $_POST['delimiter'] : ',';
-
-		$csv_array = rcp_csvui_csv_to_array( $csv, $delimiter );
-
+		$delimiter       = isset( $_POST['delimiter'] ) ? sanitize_text_field( $_POST['delimiter'] ) : ',';
+		$csv_array       = rcp_csvui_csv_to_array( $csv, $delimiter );
 		$subscription_id = isset( $_POST['rcp_level'] ) ? absint( $_POST['rcp_level'] ) : false;
+		
 		if( ! $subscription_id ) {
 			wp_die( __('Please select a subscription level.', 'rcp_csvui' ), __('Error') );
 		}
@@ -116,25 +119,37 @@ function rcp_csvui_process_csv() {
 			wp_die( sprintf( __('That subscription level does not exist: #%d.', 'rcp_csvui' ), $subscription_id ), __('Error') );
 		}
 
-		$status = isset( $_POST['rcp_status'] ) ? esc_attr( $_POST['rcp_status'] ) : 'free';
-
+		$status     = isset( $_POST['rcp_status'] ) ? sanitize_text_field( $_POST['rcp_status'] ) : 'free';
 		$expiration = isset( $_POST['rcp_expiration'] ) ? sanitize_text_field( $_POST['rcp_expiration'] ) : false;
+
 		if( ! $expiration || strlen( trim( $expiration ) ) <= 0 ) {
 			// calculate expiration here
 			$expiration = rcp_calculate_subscription_expiration( $subscription_id );
 		}
 
-		foreach( $csv_array as $user ) {
+		foreach ( $csv_array as $user ) {
 
-			$user_data = get_user_by( 'email', $user['user_email'] );
+			if ( ! empty( $user['id'] ) ) {
+
+				$user_data = get_userdata( $user['id'] );
+			
+			} elseif ( ! empty( $user['ID'] ) ) {
+
+				$user_data = get_userdata( $user['ID'] );
+			
+			} else {
+
+				$user_data = get_user_by( 'email', $user['user_email'] );
+	
+			}
+
 			if( ! $user_data ) {
 
-				$email = $user['user_email'];
-				$password = wp_generate_password();
+				$email      = $user['user_email'];
+				$password   = wp_generate_password();
+				$user_login = ! empty( $user['user_login'] ) ? $user['user_login'] : $user['user_email'];
 
-				$user_login = isset( $user['user_login'] ) && strlen( trim( $user['user_login'] ) ) > 0 ? $user['user_login'] : $user['user_email'];
-
-				$user_data = array(
+				$user_data  = array(
 					'user_login' => $user_login,
 					'user_email' => $email,
 					'first_name' => $user['first_name'],
@@ -147,12 +162,12 @@ function rcp_csvui_process_csv() {
 
 			} else {
 				$user_id = $user->ID;
-				$email = $user->user_email;
+				$email   = $user->user_email;
 			}
 
             add_user_meta( $user_id, 'rcp_subscription_level', $subscription_id );
-            add_user_meta( $user_id, 'rcp_status', $status );
-            add_user_meta( $user_id, 'rcp_expiration', $expiration );
+            rcp_set_expiration_date( $user_id, $expiration );
+            rcp_set_status( $user_id, $status );
 
             do_action( 'rcp_user_import_user_added', $user_id, $user_data, $subscription_id, $status, $expiration );
 		}
