@@ -3,7 +3,7 @@
 Plugin Name: Restrict Content Pro - CSV User Import
 Plugin URL: http://pippinsplugins.com/rcp-csv-user-import
 Description: Allows you to import a CSV of users into Restrict Content Pro
-Version: 1.0.3
+Version: 1.1
 Author: Pippin Williamson
 Author URI: http://pippinsplugins.com
 Contributors: mordauk, chriscoyier
@@ -27,7 +27,7 @@ function rcp_csvui_purchase_import() {
 		<h2><?php _e('CSV User Import', 'rcp_csvui'); ?></h2>
 		<?php settings_errors( 'rcp-csv-ui' ); ?>
 		<P><?php _e('Use this tool to import user memberships into Restrict Content Pro', 'rcp_csvui'); ?></p>
-		<p><?php _e('<strong>Note</strong>: your CSV should contain the following fields: <em>user_email, first_name, last_name, user_login</em>.', 'rcp_csvui' ); ?></p>
+		<p><?php _e('<strong>Note</strong>: your CSV should contain the following fields: <em>user_email, first_name, last_name, user_login</em>. If you wish to update existing users, you can include a <em>ID</em> field as well.', 'rcp_csvui' ); ?></p>
 		<script type="text/javascript">jQuery(document).ready(function($) { var dateFormat = 'yy-mm-dd'; $('.rcp_datepicker').datepicker({dateFormat: dateFormat}); });</script>
 		<form id="rcp_csvui_import" enctype="multipart/form-data" method="post">
 			<table class="form-table">
@@ -72,16 +72,7 @@ function rcp_csvui_purchase_import() {
 						<div class="description"><?php _e('Select the expiration date for all users. Leave this blank and the expiration date will be automatically calculated based on the selected subscription.', 'rcp_csvui'); ?></div>
 					</td>
 				</tr>
-				<tr>
-					<th><?php _e('Delimiter', 'rcp_csv_ui'); ?></th>
-					<td>
-						<select name="delimiter" id="delimiter">
-							<option value=","><?php _e('Comma (,)', 'rcp_csvui'); ?></option>
-							<option value=";"><?php _e('Semi-Colon (;)', 'rcp_csvui'); ?></option>
-						</select>
-						<div class="description"><?php _e('Select the field delimiter used in the CSV.', 'rcp_csvui'); ?></div>
-					</td>
-				</tr>
+
 			</table>
 			<input type="hidden" name="rcp_action" value="process_csv_import"/>
 			<?php wp_nonce_field('rcp_csvui_nonce', 'rcp_csvui_nonce'); ?>
@@ -99,14 +90,19 @@ function rcp_csvui_process_csv() {
 			return;
 		}
 
-		$csv = isset( $_FILES['rcp_csvui_file'] ) ? $_FILES['rcp_csvui_file']['tmp_name'] : false;
+		if( ! class_exists( 'parseCSV' ) ) {
 
-		if( !$csv ) {
+			require_once dirname( __FILE__ ) . '/parsecsv.lib.php';
+		}
+
+		$import_file = ! empty( $_FILES['rcp_csvui_file'] ) ? $_FILES['rcp_csvui_file']['tmp_name'] : false;
+
+		if( ! $import_file ) {
 			wp_die( __('Please upload a CSV file.', 'rcp_csvui' ), __('Error') );
 		}
 
-		$delimiter       = isset( $_POST['delimiter'] ) ? sanitize_text_field( $_POST['delimiter'] ) : ',';
-		$csv_array       = rcp_csvui_csv_to_array( $csv, $delimiter );
+		$csv = new parseCSV( $import_file );
+		
 		$subscription_id = isset( $_POST['rcp_level'] ) ? absint( $_POST['rcp_level'] ) : false;
 		
 		if( ! $subscription_id ) {
@@ -127,7 +123,7 @@ function rcp_csvui_process_csv() {
 			$expiration = rcp_calculate_subscription_expiration( $subscription_id );
 		}
 
-		foreach ( $csv_array as $user ) {
+		foreach ( $csv->data as $user ) {
 
 			if ( ! empty( $user['id'] ) ) {
 
