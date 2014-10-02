@@ -6,7 +6,7 @@ Donate link: http://pippinsplugins.com/support-the-site
 Tags: Restrict Content Pro, premium content, memberships, subscriptions, csv, user import, csv to users, Pippin Williamson, Pippin's Plugins
 Requires at least 3.3
 Tested up to 4.0
-Stable tag: 1.0.3
+Stable tag: 1.1.1
 
 A plugin for importing a CSV of user accounts into Restrict Content Pro
 
@@ -39,6 +39,14 @@ When importing, every user has their password auto generated, so each user will 
 1. CSV user import page.
 
 == Changelog ==
+
+= 1.1.1 =
+
+* Properly esc the select element
+
+= 1.1 =
+
+* Improved the CSV import process to make it far more reliable.
 
 = 1.0.3 =
 
