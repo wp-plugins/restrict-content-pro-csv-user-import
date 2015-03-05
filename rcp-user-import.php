@@ -3,7 +3,7 @@
 Plugin Name: Restrict Content Pro - CSV User Import
 Plugin URL: http://pippinsplugins.com/rcp-csv-user-import
 Description: Allows you to import a CSV of users into Restrict Content Pro
-Version: 1.1.1
+Version: 1.1.2
 Author: Pippin Williamson
 Author URI: http://pippinsplugins.com
 Contributors: mordauk, chriscoyier
@@ -161,7 +161,7 @@ function rcp_csvui_process_csv() {
 				$email   = $user->user_email;
 			}
 
-            add_user_meta( $user_id, 'rcp_subscription_level', $subscription_id );
+            update_user_meta( $user_id, 'rcp_subscription_level', $subscription_id );
             rcp_set_expiration_date( $user_id, $expiration );
             rcp_set_status( $user_id, $status );
 
